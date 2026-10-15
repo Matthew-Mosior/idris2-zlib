@@ -1,0 +1,5 @@
+build/
+support/*.d
+support/*.o
+support/zlib-idris.so
+*.*~

@@ -1,0 +1,23 @@
+package zlib
+
+authors    = "Matthew Mosior"
+brief      = "Idris2 bindings to zlib"
+license    = "BSD-3 Clause"
+version    = 0.1.0
+sourcedir  = "src"
+depends    = base
+           , array
+           , bytestring
+           , elab-util
+           , elin
+           , posix
+           , ref1
+modules    = Codec.Compression.Zlib.Internal
+           , Codec.Compression.Zlib.Compress
+           , Codec.Compression.Zlib.Decompress
+           , System.Zlib.Constants
+           , System.Zlib.Error
+           , System.Zlib.Raw
+           , System.Zlib.Types
+prebuild   = "make -C support"
+preinstall = "make -C support install"

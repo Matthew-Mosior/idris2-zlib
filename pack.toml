@@ -1,0 +1,5 @@
+[custom.all.zlib]
+type = "local"
+path = "."
+ipkg = "zlib.ipkg"
+test = "test/test.ipkg"
