@@ -74,17 +74,7 @@ prim__deflateInit2 : AnyPtr -> Int -> Int -> Int -> Int -> Int -> PrimIO Int
 
 ||| Compresses bytes from an Idris `Buffer` into another Idris `Buffer`.
 |||
-||| Both buffers are borrowed only for the duration of this call. On Chez,
-||| each `Buffer` is represented by a bytevector and passed to the C shim as
-||| a `u8*`.
-|||
-||| The C shim installs these temporary pointers as `next_in` and `next_out`,
-||| invokes `deflate`, records the number of bytes consumed and produced, and
-||| clears both pointers before returning.
-|||
-||| No pointer to either Idris buffer may be retained after this call returns.
-|||
-export %foreign "scheme,chez:(lambda (stream input inputoffset inputlen output outputoffset outputlen flush) ((foreign-procedure \"zlib_idris_deflate_buffer\" (void* u8* unsigned-32 unsigned-32 u8* unsigned-32 unsigned-32 int) int) stream input inputoffset inputlen output outputoffset outputlen flush))"
+export %foreign "C:zlib_idris_deflate_buffer,zlib-idris"
 prim__deflateBuffer : AnyPtr -> Buffer -> Bits32 -> Bits32 -> Buffer -> Bits32 -> Bits32 -> Int -> PrimIO Int
 
 ||| Releases all zlib resources associated with an initialized compression
@@ -134,17 +124,8 @@ prim__inflateInit2 : AnyPtr -> Int -> PrimIO Int
 
 ||| Decompresses bytes from an Idris `Buffer` into another Idris `Buffer`.
 |||
-||| Both buffers are borrowed only for the duration of this call. On Chez,
-||| each `Buffer` is passed to the C shim as a `u8*`.
-|||
-||| The C shim installs the borrowed pointers in the underlying `z_stream`,
-||| invokes `inflate`, records the number of bytes consumed and produced, and
-||| clears the pointers before returning.
-|||
-||| No pointer to either Idris buffer may be retained after this call returns.
-|||
-export %foreign "scheme,chez:(lambda (stream input inputoffset inputlen output outputoffset outputlen flush) ((foreign-procedure \"zlib_idris_inflate_buffer\" (void* u8* unsigned-32 unsigned-32 u8* unsigned-32 unsigned-32 int) int) stream input inputoffset inputlen output outputoffset outputlen flush))"
-prim__inflateBuffer :  AnyPtr -> Buffer -> Bits32 -> Bits32 -> Buffer -> Bits32 -> Bits32 -> Int -> PrimIO Int
+export %foreign "C:zlib_idris_inflate_buffer,zlib-idris"
+prim__inflateBuffer : AnyPtr -> Buffer -> Bits32 -> Bits32 -> Buffer -> Bits32 -> Bits32 -> Int -> PrimIO Int
 
 ||| Releases all zlib resources associated with an initialized decompression
 ||| stream.
@@ -184,16 +165,10 @@ prim__produced : AnyPtr -> PrimIO Bits32
 
 ||| Updates a CRC-32 checksum using the contents of an Idris `Buffer`.
 |||
-||| On Chez, the buffer is borrowed as a `u8*` only for the duration of the
-||| C call. The pointer is not retained by zlib.
-|||
-export %foreign "scheme,chez:(lambda (crc input inputLen) ((foreign-procedure \"zlib_idris_crc32\" (unsigned-32 u8* unsigned-32) unsigned-32) crc input inputLen))"
+export %foreign "C:zlib_idris_crc32,zlib-idris"
 prim__crc32 : Bits32 -> Buffer -> Bits32 -> PrimIO Bits32
 
 ||| Updates an Adler-32 checksum using the contents of an Idris `Buffer`.
 |||
-||| On Chez, the buffer is borrowed as a `u8*` only for the duration of the
-||| C call. The pointer is not retained by zlib.
-|||
-export %foreign "scheme,chez:(lambda (adler input inputLen) ((foreign-procedure \"zlib_idris_adler32\" (unsigned-32 u8* unsigned-32) unsigned-32) adler input inputLen))"
+export %foreign "C:zlib_idris_adler32,zlib-idris"
 prim__adler32 : Bits32 -> Buffer -> Bits32 -> PrimIO Bits32

@@ -1,7 +1,11 @@
 module System.Zlib.Error
 
+import Derive.Prelude
 import System.Posix.Timer
 import System.Posix.Timer.Prim
+
+%default total
+%language ElabReflection
 
 ||| Represents the possible errors reported by the zlib compression or decompression API.
 |||
@@ -16,6 +20,8 @@ data ZlibErr
   | ErrnoError
   | UnknownError Int
   | MiscError String
+
+%runElab derive "ZlibErr" [Show]  
 
 ||| Converts a zlib return code to the corresponding typed error.
 |||
@@ -46,3 +52,20 @@ record ZlibError where
   fnname                : String
   error                 : ZlibErr
   errormessagetimestamp : Maybe (IClock CLOCK_REALTIME)
+
+public export
+Show ZlibError where
+  show (MkZlibError fnname error (Just errormessagetimestamp)) =
+    "MkZlibError " ++
+    fnname         ++
+    " "            ++
+    (show error)   ++
+    " "            ++
+    (asctime $ fromUTC errormessagetimestamp)
+  show (MkZlibError fnname error Nothing)                      =
+    "MkZlibError " ++
+    fnname         ++
+    " "            ++
+    (show error)   ++
+    " "            ++
+    "IClock CLOCK_REALTIME"

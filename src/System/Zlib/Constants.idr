@@ -12,6 +12,12 @@ export
 Z_STREAM_END : Int
 Z_STREAM_END = 1
 
+||| Indicates that the current chunk of input data is the final block of the stream.
+|||
+export
+Z_FINISH : Int
+Z_FINISH = 4
+
 ||| Indicates that a preset dictionary is required to continue decompression.
 |||
 export

@@ -75,9 +75,11 @@ zlib_idris_deflate_init2(
 int
 zlib_idris_deflate_buffer(
     zlib_idris_stream *s,
-    uint8_t *input,
+    const uint8_t *input,
+    uint32_t input_offset,
     uint32_t input_len,
     uint8_t *output,
+    uint32_t output_offset,
     uint32_t output_len,
     int flush
 )
@@ -87,19 +89,26 @@ zlib_idris_deflate_buffer(
     if (s == NULL)
         return Z_STREAM_ERROR;
 
+    if (input == NULL && input_len != 0)
+        return Z_STREAM_ERROR;
+
+    if (output == NULL && output_len != 0)
+        return Z_STREAM_ERROR;
+
     s->stream.next_in =
-        (Bytef *)input;
+        (Bytef *)(input + input_offset);
 
     s->stream.avail_in =
         (uInt)input_len;
 
     s->stream.next_out =
-        (Bytef *)output;
+        (Bytef *)(output + output_offset);
 
     s->stream.avail_out =
         (uInt)output_len;
 
-    status = deflate(&s->stream, flush);
+    status =
+        deflate(&s->stream, flush);
 
     s->consumed =
         input_len - (uint32_t)s->stream.avail_in;
@@ -108,10 +117,8 @@ zlib_idris_deflate_buffer(
         output_len - (uint32_t)s->stream.avail_out;
 
     /*
-     * These pointers refer to Chez-managed bytevectors.
-     *
-     * They are valid only during this foreign call and therefore must
-     * never remain reachable from the z_stream after we return.
+     * Never retain pointers into Idris/Chez-managed buffers after the
+     * foreign call returns.
      */
     s->stream.next_in = Z_NULL;
     s->stream.avail_in = 0;
@@ -125,9 +132,11 @@ zlib_idris_deflate_buffer(
 int
 zlib_idris_inflate_buffer(
     zlib_idris_stream *s,
-    uint8_t *input,
+    const uint8_t *input,
+    uint32_t input_offset,
     uint32_t input_len,
     uint8_t *output,
+    uint32_t output_offset,
     uint32_t output_len,
     int flush
 )
@@ -137,19 +146,26 @@ zlib_idris_inflate_buffer(
     if (s == NULL)
         return Z_STREAM_ERROR;
 
+    if (input == NULL && input_len != 0)
+        return Z_STREAM_ERROR;
+
+    if (output == NULL && output_len != 0)
+        return Z_STREAM_ERROR;
+
     s->stream.next_in =
-        (Bytef *)input;
+        (Bytef *)(input + input_offset);
 
     s->stream.avail_in =
         (uInt)input_len;
 
     s->stream.next_out =
-        (Bytef *)output;
+        (Bytef *)(output + output_offset);
 
     s->stream.avail_out =
         (uInt)output_len;
 
-    status = inflate(&s->stream, flush);
+    status =
+        inflate(&s->stream, flush);
 
     s->consumed =
         input_len - (uint32_t)s->stream.avail_in;
@@ -157,6 +173,10 @@ zlib_idris_inflate_buffer(
     s->produced =
         output_len - (uint32_t)s->stream.avail_out;
 
+    /*
+     * Never retain pointers into Idris/Chez-managed buffers after the
+     * foreign call returns.
+     */
     s->stream.next_in = Z_NULL;
     s->stream.avail_in = 0;
 
