@@ -1,7 +1,6 @@
 module Main
 
 import Codec.Compression.Zlib
-import Codec.Compression.Zlib
 import Data.Buffer.Core
 import Data.Buffer.Indexed
 import Data.Linear.Token
@@ -66,6 +65,23 @@ roundTrip compressor decompressor bytes = do
   compressed   <- evalZlib (compressor input)
   decompressed <- evalZlib (decompressor compressed.ibuf)
   bufferBytes decompressed === bytes
+
+--------------------------------------------------------------------------------
+--          Checksum Test Data
+--------------------------------------------------------------------------------
+
+checksumbytes : List Bits8
+checksumbytes =
+  [ 0x31 -- 1
+  , 0x32 -- 2
+  , 0x33 -- 3
+  , 0x34 -- 4
+  , 0x35 -- 5
+  , 0x36 -- 6
+  , 0x37 -- 7
+  , 0x38 -- 8
+  , 0x39 -- 9
+  ]
 
 --------------------------------------------------------------------------------
 --          Round-trip Tests
@@ -285,6 +301,58 @@ runTests =
       go (acc && ok) xs
 
 --------------------------------------------------------------------------------
+--          Checksum Tests
+--------------------------------------------------------------------------------
+
+testCrc32KnownVector : TestT IO ()
+testCrc32KnownVector = do
+  actual <- liftIOTest (crc32 (bufferL checksumbytes))
+  actual === 0xcbf43926
+
+testAdler32KnownVector : TestT IO ()
+testAdler32KnownVector = do
+  actual <- liftIOTest (adler32 (bufferL checksumbytes))
+  actual === 0x091e01de
+
+testCrc32Empty : TestT IO ()
+testCrc32Empty = do
+  actual <- liftIOTest (crc32 (bufferL []))
+  actual === 0
+
+testAdler32Empty : TestT IO ()
+testAdler32Empty = do
+  actual <- liftIOTest (adler32 (bufferL []))
+  actual === 1
+
+testCrc32Incremental : TestT IO ()
+testCrc32Incremental = do
+  whole       <- liftIOTest (crc32 (bufferL checksumbytes))
+  first       <- liftIOTest (crc32Update 0 (bufferL [0x31, 0x32, 0x33, 0x34]))
+  incremental <- liftIOTest (crc32Update first (bufferL [0x35, 0x36, 0x37, 0x38, 0x39]))
+  incremental === whole
+
+testAdler32Incremental : TestT IO ()
+testAdler32Incremental = do
+  whole       <- liftIOTest (adler32 (bufferL checksumbytes))
+  first       <-
+    liftIOTest (adler32Update 1 (bufferL [0x31, 0x32, 0x33, 0x34]))
+  incremental <-
+    liftIOTest (adler32Update first (bufferL [0x35, 0x36, 0x37, 0x38, 0x39]))
+  incremental === whole
+
+testCrc32BinaryIncremental : TestT IO ()
+testCrc32BinaryIncremental = do
+  let left  : List Bits8
+      left  = [0x00, 0xff, 0x80, 0x01]
+      right : List Bits8
+      right = [0xfe, 0x7f, 0x00, 0xaa]
+      whole = left ++ right
+  expected <- liftIOTest (crc32 (bufferL whole))
+  first    <- liftIOTest (crc32Update 0 (bufferL left))
+  actual   <- liftIOTest (crc32Update first (bufferL right))
+  actual === expected
+
+--------------------------------------------------------------------------------
 --          Main
 --------------------------------------------------------------------------------
 
@@ -308,6 +376,13 @@ main = do
       , ("invalid zlib rejected", testInvalidZlibRejected)
       , ("invalid gzip rejected", testInvalidGzipRejected)
       , ("repetitive input compresses", testRepetitiveInputCompresses)
+      , ("CRC-32 known vector", testCrc32KnownVector)
+      , ("Adler-32 known vector", testAdler32KnownVector)
+      , ("CRC-32 empty input", testCrc32Empty)
+      , ("Adler-32 empty input", testAdler32Empty)
+      , ("CRC-32 incremental", testCrc32Incremental)
+      , ("Adler-32 incremental", testAdler32Incremental)
+      , ("CRC-32 binary incremental", testCrc32BinaryIncremental)
       ]
   case ok of
     True =>

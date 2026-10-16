@@ -163,12 +163,18 @@ prim__produced : AnyPtr -> PrimIO Bits32
 --          Checksums
 --------------------------------------------------------------------------------
 
-||| Updates a CRC-32 checksum using the contents of an Idris `Buffer`.
+||| Update a CRC-32 checksum using the contents of an Idris `Buffer`.
+|||
+||| The checksum value and result are represented as fixed-width 32-bit
+||| values even on platforms where zlib's `uLong` is wider.
 |||
 export %foreign "C:zlib_idris_crc32,zlib-idris"
 prim__crc32 : Bits32 -> Buffer -> Bits32 -> PrimIO Bits32
 
-||| Updates an Adler-32 checksum using the contents of an Idris `Buffer`.
+||| Update an Adler-32 checksum using the contents of an Idris `Buffer`.
+|||
+||| The checksum value and result are represented as fixed-width 32-bit
+||| values even on platforms where zlib's `uLong` is wider.
 |||
 export %foreign "C:zlib_idris_adler32,zlib-idris"
 prim__adler32 : Bits32 -> Buffer -> Bits32 -> PrimIO Bits32

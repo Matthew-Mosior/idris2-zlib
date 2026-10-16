@@ -12,7 +12,8 @@ depends    = base
            , elin
            , posix
            , ref1
-modules    = Codec.Compression.Zlib.Compress
+modules    = Codec.Compression.Zlib.Checksum
+           , Codec.Compression.Zlib.Compress
            , Codec.Compression.Zlib.Decompress
            , Codec.Compression.Zlib.Internal
            , Codec.Compression.Zlib.Types
