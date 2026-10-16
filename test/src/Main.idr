@@ -1,7 +1,7 @@
 module Main
 
-import Codec.Compression.Zlib.Compress
-import Codec.Compression.Zlib.Decompress
+import Codec.Compression.Zlib
+import Codec.Compression.Zlib
 import Data.Buffer.Core
 import Data.Buffer.Indexed
 import Data.Linear.Token

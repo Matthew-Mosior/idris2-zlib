@@ -16,6 +16,7 @@ modules    = Codec.Compression.Zlib.Compress
            , Codec.Compression.Zlib.Decompress
            , Codec.Compression.Zlib.Internal
            , Codec.Compression.Zlib.Types
+           , Codec.Compression.Zlib
            , System.Zlib.Constants
            , System.Zlib.Error
            , System.Zlib.Raw
