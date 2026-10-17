@@ -59,6 +59,7 @@ record BufferResult where
 public export
 record CompressStreamResult where
   constructor MkCompressStreamResult
+  consumed : Nat
   output   : List AnyBuffer
   finished : Bool
 

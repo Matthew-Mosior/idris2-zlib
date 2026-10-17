@@ -1,6 +1,7 @@
 module Main
 
 import Codec.Compression.Zlib
+import Data.Buffer.Builder
 import Data.Buffer.Core
 import Data.Buffer.Indexed
 import Data.Linear.Token
@@ -46,10 +47,10 @@ evalZlib action = do
     Right value =>
       pure value
 
-
 ||| Convert an `AnyBuffer` to a list of bytes.
 |||
-bufferBytes : AnyBuffer -> List Bits8
+bufferBytes :  AnyBuffer
+            -> List Bits8
 bufferBytes =
   unpack
 
@@ -82,6 +83,264 @@ checksumbytes =
   , 0x38 -- 8
   , 0x39 -- 9
   ]
+
+--------------------------------------------------------------------------------
+--          Streaming Test Utilities
+--------------------------------------------------------------------------------
+
+||| Split a list into chunks of at most the requested size.
+|||
+||| A zero chunk size returns the complete input as one chunk.
+|||
+private
+chunksOf :  Nat
+         -> List a
+         -> List (List a)
+chunksOf 0 [] =
+  []
+chunksOf 0 xs =
+  [xs]
+chunksOf n@(S _) xs =
+  go xs
+  where
+    go :  List a
+       -> List (List a)
+    go [] =
+      []
+    go ys =
+      let (chunk, rest) = splitAt n ys
+       in chunk :: assert_total (go rest)
+
+||| Insert empty chunks between existing chunks.
+|||
+private
+withEmptyChunks :  List (List a)
+                -> List (List a)
+withEmptyChunks []        =
+  []
+withEmptyChunks [x]       =
+  [x]
+withEmptyChunks (x :: xs) =
+  x :: [] :: withEmptyChunks xs
+
+
+||| Remove the final element from a list.
+|||
+private
+dropLast :  List a
+         -> List a
+dropLast []        =
+  []
+dropLast [_]       =
+  []
+dropLast (x :: xs) =
+  x :: dropLast xs
+
+||| Select the one-shot compressor corresponding to a wrapper.
+|||
+private
+oneShotCompress :  Wrapper
+                -> {n : Nat}
+                -> IBuffer n
+                -> IO (Either (List ZlibError) AnyBuffer)
+oneShotCompress ZlibWrapper =
+  compress
+oneShotCompress GZipWrapper =
+  gzipCompress
+oneShotCompress RawWrapper =
+  rawCompress
+
+||| Select the one-shot decompressor corresponding to a wrapper.
+|||
+private
+oneShotDecompress :  Wrapper
+                  -> {n : Nat}
+                  -> IBuffer n
+                  -> IO (Either (List ZlibError) AnyBuffer)
+oneShotDecompress ZlibWrapper =
+  decompress
+oneShotDecompress GZipWrapper =
+  gzipDecompress
+oneShotDecompress RawWrapper =
+  rawDecompress
+
+||| Compress a sequence of input chunks and finish the stream.
+|||
+private
+streamCompress :
+     Wrapper
+  -> List (List Bits8)
+  -> IO (Either (List ZlibError) AnyBuffer)
+streamCompress wrapper chunks =
+  withStreamingCompressor
+    DefaultCompression
+    wrapper
+    $ \stream =>
+        feed stream chunks []
+  where
+    feed :
+         StreamingCompressor
+      -> List (List Bits8)
+      -> List AnyBuffer
+      -> IO (Either (List ZlibError) AnyBuffer)
+
+    feed stream [] acc = do
+      Right result <- finishCompressor stream
+        | Left errs =>
+            pure (Left errs)
+
+      pure $
+        Right $
+          Data.Buffer.Builder.fastConcat
+            (acc ++ result.output)
+
+    feed stream (bytes :: rest) acc = do
+      Right result <-
+        compressChunk
+          stream
+          (bufferL bytes)
+        | Left errs =>
+            pure (Left errs)
+
+      let acc' =
+            acc ++ result.output
+
+          (_, remaining) =
+            splitAt result.consumed bytes
+
+      case remaining of
+        [] =>
+          feed stream rest acc'
+
+        _ =>
+          case rest of
+            [] =>
+              assert_total $
+                feed stream [remaining] acc'
+
+            next :: more =>
+              assert_total $
+                feed
+                  stream
+                  ((remaining ++ next) :: more)
+                  acc'
+
+||| Incrementally decompress a sequence of compressed chunks.
+|||
+||| The returned boolean indicates whether `Z_STREAM_END` was reached.
+|||
+private
+streamDecompress :  Wrapper
+                 -> List (List Bits8)
+                 -> IO (Either (List ZlibError) (AnyBuffer, Bool))
+streamDecompress wrapper chunks =
+  withStreamingDecompressor
+    wrapper
+    $ \stream =>
+        feed stream chunks []
+  where
+    feed :  StreamingDecompressor
+         -> List (List Bits8)
+         -> List AnyBuffer
+         -> IO (Either (List ZlibError) (AnyBuffer, Bool))
+    feed stream [] acc =
+      pure
+        ( Right
+            ( Data.Buffer.Builder.fastConcat (reverse acc)
+            , False
+            )
+        )
+    feed stream (bytes :: rest) acc = do
+      Right result <-
+        decompressChunk
+          stream
+          (bufferL bytes)
+        | Left errs =>
+            pure (Left errs)
+      let acc'           : List AnyBuffer
+          acc'           =
+            reverse result.output ++ acc
+          consumed'      : Nat
+          consumed'      =
+            result.consumed
+          remaining      =
+            splitAt consumed' bytes
+      case result.finished of
+        True =>
+          pure
+            ( Right
+                ( Data.Buffer.Builder.fastConcat (reverse acc')
+                , True
+                )
+            )
+        False =>
+          case snd remaining of
+            [] =>
+              assert_total (feed stream rest acc')
+            _ =>
+              case rest of
+                [] =>
+                  -- zlib has not consumed the complete final input
+                  -- and there is no additional input available.
+                  pure
+                    ( Right
+                        ( Data.Buffer.Builder.fastConcat (reverse acc')
+                        , False
+                        )
+                    )
+                next :: more =>
+                  -- `remaining` was not consumed by inflate.  Preserve it
+                  -- and prepend it to the next supplied chunk.
+                  assert_total (feed stream ((snd remaining ++ next) :: more) acc')
+
+--------------------------------------------------------------------------------
+--          Streaming Test Data
+--------------------------------------------------------------------------------
+
+private
+payloadblock : List Bits8
+payloadblock =
+  [ 0x00
+  , 0x01
+  , 0x02
+  , 0x03
+  , 0x7f
+  , 0x80
+  , 0xfe
+  , 0xff
+  , 0x11
+  , 0x22
+  , 0x33
+  , 0x44
+  , 0x55
+  , 0x66
+  , 0x77
+  , 0x88
+  ]
+
+||| 1 KiB.
+|||
+private
+smallStreamingPayload : List Bits8
+smallStreamingPayload =
+  concat $
+    replicate 64 payloadblock
+
+||| 80 KiB, ensuring several 32 KiB boundaries are crossed.
+|||
+private
+chunkBoundaryPayload : List Bits8
+chunkBoundaryPayload =
+  concat $
+    replicate 5120 payloadblock
+
+||| 144,000 bytes: comfortably over 100 KiB.
+|||
+private
+largeStreamingPayload : List Bits8
+largeStreamingPayload =
+  concat $
+    replicate 9000 payloadblock
 
 --------------------------------------------------------------------------------
 --          Round-trip Tests
@@ -353,6 +612,166 @@ testCrc32BinaryIncremental = do
   actual === expected
 
 --------------------------------------------------------------------------------
+--          Streaming Tests
+--------------------------------------------------------------------------------
+
+testOneByteStreamingCompressOneShotDecompress : TestT IO ()
+testOneByteStreamingCompressOneShotDecompress = do
+  compressed <-
+    evalZlib $
+      streamCompress
+        ZlibWrapper
+        (chunksOf 1 smallStreamingPayload)
+
+  decoded <-
+    evalZlib $
+      decompress compressed.ibuf
+
+  unpack decoded === smallStreamingPayload
+
+
+testOneShotCompressOneByteStreamingDecompress : TestT IO ()
+testOneShotCompressOneByteStreamingDecompress = do
+  compressed <-
+    evalZlib $
+      compress (bufferL smallStreamingPayload)
+
+  (decoded, finished) <-
+    evalZlib $
+      streamDecompress
+        ZlibWrapper
+        (chunksOf 1 (unpack compressed))
+
+  finished === True
+  unpack decoded === smallStreamingPayload
+
+testStreamingOneByteChunks : TestT IO ()
+testStreamingOneByteChunks = do
+  compressed          <-
+    evalZlib (streamCompress ZlibWrapper (chunksOf 1 smallStreamingPayload))
+  (decoded, finished) <-
+    evalZlib (streamDecompress ZlibWrapper (chunksOf 1 (unpack compressed)))
+  finished       === True
+  unpack decoded === smallStreamingPayload
+
+testDebugStreamingCompress : TestT IO ()
+testDebugStreamingCompress = do
+  let bytes : List Bits8
+      bytes =
+        [ 0x00
+        , 0x01
+        , 0x02
+        , 0x03
+        ]
+
+  result <-
+    evalZlib $
+      withStreamingCompressor
+        DefaultCompression
+        ZlibWrapper
+        $ \stream =>
+            go stream (chunksOf 1 bytes) []
+  success
+  where
+    go :
+         StreamingCompressor
+      -> List (List Bits8)
+      -> List AnyBuffer
+      -> IO (Either (List ZlibError) ())
+    go stream [] acc = do
+      Right result <- finishCompressor stream
+        | Left errs =>
+            pure (Left errs)
+
+      putStrLn $
+        "finish: consumed="
+          ++ show result.consumed
+          ++ " finished="
+          ++ show result.finished
+          ++ " chunks="
+          ++ show (map (\b => unpack b) result.output)
+
+      let allOutput =
+            Data.Buffer.Builder.fastConcat
+              (acc ++ result.output)
+
+      putStrLn $
+        "final compressed = "
+          ++ show (unpack allOutput)
+
+      pure (Right ())
+
+    go stream (chunk :: rest) acc = do
+      Right result <-
+        compressChunk stream (bufferL chunk)
+        | Left errs =>
+            pure (Left errs)
+
+      putStrLn $
+        "compress "
+          ++ show chunk
+          ++ ": consumed="
+          ++ show result.consumed
+          ++ " finished="
+          ++ show result.finished
+          ++ " output="
+          ++ show (map (\b => unpack b) result.output)
+
+      go
+        stream
+        rest
+        (acc ++ result.output)
+
+testDebugStreamingDecompress : TestT IO ()
+testDebugStreamingDecompress = do
+  compressed <-
+    evalZlib $
+      compress $
+        bufferL
+          [ 0x00
+          , 0x01
+          , 0x02
+          , 0x03
+          ]
+
+  let compressedBytes =
+        unpack compressed
+
+  _ <-
+    evalZlib $
+      withStreamingDecompressor
+        ZlibWrapper
+        $ \stream =>
+            go stream (chunksOf 1 compressedBytes)
+
+  success
+  where
+    go :
+         StreamingDecompressor
+      -> List (List Bits8)
+      -> IO (Either (List ZlibError) ())
+    go stream [] =
+      pure (Right ())
+
+    go stream (chunk :: rest) = do
+      Right result <-
+        decompressChunk stream (bufferL chunk)
+        | Left errs =>
+            pure (Left errs)
+
+      putStrLn $
+        "inflate "
+          ++ show chunk
+          ++ ": consumed="
+          ++ show result.consumed
+          ++ " finished="
+          ++ show result.finished
+          ++ " output="
+          ++ show (map (\b => unpack b) result.output)
+
+      go stream rest        
+
+--------------------------------------------------------------------------------
 --          Main
 --------------------------------------------------------------------------------
 
@@ -383,6 +802,11 @@ main = do
       , ("CRC-32 incremental", testCrc32Incremental)
       , ("Adler-32 incremental", testAdler32Incremental)
       , ("CRC-32 binary incremental", testCrc32BinaryIncremental)
+      , ("streaming compress (debug)", testDebugStreamingCompress)
+      , ("streaming decompress (debug)", testDebugStreamingDecompress)
+      --, ("streaming 1-byte chunks", testOneByteStreamingCompressOneShotDecompress)
+      --, ("streaming 1-byte chunks", testOneShotCompressOneByteStreamingDecompress)
+      --, ("streaming 1-byte chunks", testStreamingOneByteChunks)
       ]
   case ok of
     True =>

@@ -85,13 +85,14 @@ compressWith level wrapper input =
                             )
             pure (Left errs)
           True =>
-            pure
-              ( Right
-                 ( freezeOutput
-                   (produced result)
-                   output
-                 )
-              )
+            case isLTE (produced result) capacity of
+              No _               => do
+                errs <- mkError "Codec.Compression.Zlib.Compress.compressWith"
+                                "deflate reported producing bytes beyond the output buffer"
+                pure (Left errs)
+              Yes producedBounds => do
+                frozen <- freezeOutput (produced result) output {bounds = producedBounds}
+                pure (Right frozen)
 
 --------------------------------------------------------------------------------
 --          Convenience Operations

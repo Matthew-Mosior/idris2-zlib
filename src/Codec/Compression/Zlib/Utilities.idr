@@ -1,5 +1,6 @@
 module Codec.Compression.Zlib.Utilities
 
+import Codec.Compression.Zlib.Proofs
 import Control.Monad.Elin
 import Control.Monad.MCancel
 import Data.Buffer
@@ -95,14 +96,19 @@ statusError :  String
 statusError location status =
   mkError location (zlibStatusMessage status)
 
-||| Wrap the used prefix of a mutable output buffer in an immutable buffer
-||| without copying.
-|||
-||| The mutable buffer must not be used after this operation.
+||| Copy the used prefix of a mutable output buffer into an independently
+||| owned immutable buffer.
 |||
 export
 freezeOutput :  (used : Nat)
              -> IOBuffer capacity
-             -> AnyBuffer
-freezeOutput used output =
-  AB used (unsafeMakeBuffer (unsafeFromMBuffer output))
+             -> {auto 0 bounds : LTE used capacity}
+             -> IO AnyBuffer
+freezeOutput used output = do
+  frozen <- mbuffer used
+  runIO (copy output 0 0 used {p1 = bounds} {p2 = lteReflexive used} frozen)
+  pure
+    ( AB used
+         (unsafeMakeBuffer
+         (unsafeFromMBuffer frozen))
+    )

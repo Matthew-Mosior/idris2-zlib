@@ -83,19 +83,29 @@ decompressWith wrapper input =
           NoFlush
         | Left errs =>
             pure (Left errs)
-      let consumed' : Nat
-          consumed' = consumed result
-          produced' : Nat
-          produced' = produced result
-          nextoffset : Nat
-          nextoffset = inputoffset + consumed'
-          chunks' : List AnyBuffer
-          chunks' =
+      let consumed'   : Nat
+          consumed'   = consumed result
+          produced'   : Nat
+          produced'   = produced result
+          nextoffset  : Nat
+          nextoffset  = inputoffset + consumed'
+          chunkresult : IO (Either (List ZlibError) (List AnyBuffer))
+          chunkresult =
             case produced' of
               0 =>
-                chunks
+                pure (Right chunks)
               _ =>
-                freezeOutput produced' output :: chunks
+                case isLTE produced' inflateChunkSize of
+                  No _               => do
+                    errs <- mkError "Codec.Compression.Zlib.Decompress.decompressWith.go"
+                                    "inflate reported producing bytes beyond the output buffer"
+                    pure (Left errs)
+                  Yes producedBounds => do
+                    frozen <- freezeOutput produced' output {bounds = producedBounds}
+                    pure (Right (frozen :: chunks))
+      Right chunks' <- chunkresult
+        | Left errs =>
+            pure (Left errs)
       case status result == Z_STREAM_END of
         True  =>
           pure

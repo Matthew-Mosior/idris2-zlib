@@ -66,6 +66,27 @@ dummyInput : IBuffer 1
 dummyInput =
   bufferL [0]
 
+private
+prependProduced :  {capacity : Nat}
+                -> String
+                -> (produced : Nat)
+                -> IOBuffer capacity
+                -> List AnyBuffer
+                -> IO (Either (List ZlibError) (List AnyBuffer))
+prependProduced {capacity} location produced output chunks =
+  case produced of
+    0 =>
+      pure (Right chunks)
+    _ =>
+      case isLTE produced capacity of
+        No _               => do
+          errs <- mkError location
+                          "zlib reported producing bytes beyond the output buffer"
+          pure (Left errs)
+        Yes producedBounds => do
+          frozen <- freezeOutput produced output {bounds = producedBounds}
+          pure (Right (frozen :: chunks))
+
 --------------------------------------------------------------------------------
 --          Resource Management
 --------------------------------------------------------------------------------
@@ -142,6 +163,7 @@ compressInput (MkStreamingCompressor compressor) flush input =
                           pure
                             ( Right
                                 ( MkCompressStreamResult
+                                    nextoffset
                                     (reverse chunks')
                                     False
                                 )
@@ -174,17 +196,20 @@ compressInput (MkStreamingCompressor compressor) flush input =
             produced'  = produced result
             nextoffset : Nat
             nextoffset = inputoffset + consumed'
-            chunks'    : List AnyBuffer
-            chunks'    = case produced' of
-                           0 =>
-                             chunks
-                           _ =>
-                             freezeOutput produced' output :: chunks
+        Right chunks' <-
+          prependProduced
+            "Codec.Compression.Zlib.Stream.compressInput.go"
+            produced'
+            output
+            chunks
+          | Left errs =>
+              pure (Left errs)
         case status result of
           1          =>
             pure
               ( Right
                   ( MkCompressStreamResult
+                      nextoffset
                       (reverse chunks')
                       True
                   )
@@ -203,6 +228,7 @@ compressInput (MkStreamingCompressor compressor) flush input =
                     pure
                       ( Right
                           ( MkCompressStreamResult
+                              nextoffset
                               (reverse chunks')
                               False
                           )
@@ -275,20 +301,21 @@ finishCompressor (MkStreamingCompressor compressor) =
         | Left errs =>
             pure (Left errs)
       let produced' : Nat
-          produced' =
-            produced result
-          chunks'   : List AnyBuffer
-          chunks'   =
-            case produced' of
-              0 =>
-                chunks
-              _ =>
-                freezeOutput produced' output :: chunks
+          produced' = produced result
+      Right chunks' <-
+        prependProduced
+          "Codec.Compression.Zlib.Stream.finishCompressor.finish"
+          produced'
+          output
+          chunks
+        | Left errs =>
+            pure (Left errs)
       case status result of
         1          =>
           pure
             ( Right
                 ( MkCompressStreamResult
+                    0
                     (reverse chunks')
                     True
                 )
@@ -387,18 +414,20 @@ decompressChunk (MkStreamingDecompressor decompressor) input =
             NoFlush
           | Left errs =>
               pure (Left errs)
-        let consumed'   : Nat
-            consumed'   = consumed result
-            produced'   : Nat
-            produced'   = produced result
-            nextoffset  : Nat
-            nextoffset  = inputoffset + consumed'
-            chunks'     : List AnyBuffer
-            chunks'     = case produced' of
-                            0 =>
-                              chunks
-                            _ =>
-                              freezeOutput produced' output :: chunks
+        let consumed'  : Nat
+            consumed'  = consumed result
+            produced'  : Nat
+            produced'  = produced result
+            nextoffset : Nat
+            nextoffset = inputoffset + consumed'
+        Right chunks'  <-
+          prependProduced
+            "Codec.Compression.Zlib.Stream.decompressChunk.go"
+            produced'
+            output
+            chunks
+          | Left errs =>
+              pure (Left errs)
         case status result of
           1          =>
             pure
