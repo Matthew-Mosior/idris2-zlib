@@ -1,5 +1,9 @@
 module System.Zlib.Types
 
+import Derive.Prelude
+
+%language ElabReflection
+
 ||| An opaque handle to a zlib `z_stream` structure.
 |||
 ||| The structure is allocated and managed by the zlib implementation and is never inspected directly by Idris code.
@@ -25,6 +29,8 @@ data ZlibCompressionLevel
   | DefaultCompression
   | CompressionLevel Int
 
+%runElab derive "ZlibCompressionLevel" [Show,Eq]
+
 ||| Converts an Idris compression-level value to the integer expected by the zlib compression API.
 |||
 export
@@ -45,6 +51,8 @@ data FlushMode
   | FullFlush
   | Finish
   | Block
+
+%runElab derive "FlushMode" [Show,Eq]
 
 ||| Converts an Idris flush mode to the integer constant expected by the zlib compression API.
 |||
@@ -71,6 +79,8 @@ data Wrapper
   | GZipWrapper
   | RawWrapper
 
+%runElab derive "Wrapper" [Show,Eq]
+
 ||| The default zlib window size used by the standard zlib wrapper.
 |||
 export
@@ -94,6 +104,8 @@ data Strategy
   | HuffmanOnly
   | RLE
   | Fixed
+
+%runElab derive "Strategy" [Show,Eq]
 
 ||| Converts an Idris compression strategy to the integer constant expected by zlib.
 |||

@@ -1,6 +1,7 @@
 module Codec.Compression.Zlib.Internal
 
 import Codec.Compression.Zlib.Types
+import Codec.Compression.Zlib.Utilities
 import Control.Monad.Elin
 import Control.Monad.MCancel
 import Data.Buffer
@@ -15,83 +16,6 @@ import System.Zlib.Types
 import System.Zlib.Raw
 
 %default total
-
---------------------------------------------------------------------------------
---          Utilities
---------------------------------------------------------------------------------
-
-||| Grab CLOCK_MONOTONIC.
-|||
-grabMonotonicTime : Elin World [Errno] (IClock CLOCK_MONOTONIC)
-grabMonotonicTime = getTime CLOCK_MONOTONIC
-
-||| Grab CLOCK_REALTIME.
-|||
-grabRealTime : Elin World [Errno] (IClock CLOCK_REALTIME)
-grabRealTime = getTime CLOCK_REALTIME
-
-||| Converts a zlib status code to a human-readable description.
-|||
-zlibStatusMessage :  Int
-                  -> String
-zlibStatusMessage status =
-  if status == Z_OK then
-    "Z_OK"
-  else if status == Z_STREAM_END then
-    "Z_STREAM_END"
-  else if status == Z_NEED_DICT then
-    "Z_NEED_DICT"
-  else if status == Z_ERRNO then
-    "Z_ERRNO"
-  else if status == Z_STREAM_ERROR then
-    "Z_STREAM_ERROR"
-  else if status == Z_DATA_ERROR then
-    "Z_DATA_ERROR"
-  else if status == Z_MEM_ERROR then
-    "Z_MEM_ERROR"
-  else if status == Z_BUF_ERROR then
-    "Z_BUF_ERROR"
-  else if status == Z_VERSION_ERROR then
-    "Z_VERSION_ERROR"
-  else
-    "Unknown zlib status: " ++ show status
-
-||| Constructs a timestamped zlib error.
-|||
-||| If obtaining CLOCK_REALTIME itself fails, both the timer error and the
-||| original zlib error are retained without timestamps.
-|||
-export
-mkError :  String
-        -> String
-        -> IO (List ZlibError)
-mkError location message = do
-  now <- runElinIO grabRealTime
-  case now of
-    Right realtime =>
-      pure [ MkZlibError
-               location
-               (MiscError message)
-               (Just realtime)
-           ]
-    Left timererr  =>
-      pure [ MkZlibError
-               location
-               (MiscError (show timererr))
-               Nothing
-           , MkZlibError
-               location
-               (MiscError message)
-               Nothing
-           ]
-
-||| Constructs a timestamped `ZlibError` from a raw zlib status code.
-|||
-statusError :  String
-            -> Int
-            -> IO (List ZlibError)
-statusError location status =
-  mkError location (zlibStatusMessage status)
 
 --------------------------------------------------------------------------------
 --          Stream Lifecycle
@@ -358,7 +282,7 @@ deflateBuffer (MkCompressor (MkZStreamHandle ptr)) inputoffset inputlength input
                    )
   consumed <- primIO (prim__consumed ptr)
   produced <- primIO (prim__produced ptr)
-  case status == Z_OK || status == Z_STREAM_END of
+  case status == Z_OK || status == Z_STREAM_END || status == Z_BUF_ERROR of
     True  =>
       pure (Right (MkBufferResult status (cast consumed) (cast produced)))
     False => do
@@ -405,7 +329,7 @@ inflateBuffer (MkDecompressor (MkZStreamHandle ptr)) inputoffset inputlength inp
                    )
   consumed <- primIO (prim__consumed ptr)
   produced <- primIO (prim__produced ptr)
-  case status == Z_OK || status == Z_STREAM_END of
+  case status == Z_OK || status == Z_STREAM_END || status == Z_BUF_ERROR of
     True  =>
       pure (Right (MkBufferResult status (cast consumed) (cast produced)))
     False => do

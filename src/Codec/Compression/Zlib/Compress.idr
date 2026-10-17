@@ -1,7 +1,9 @@
 module Codec.Compression.Zlib.Compress
 
 import Codec.Compression.Zlib.Internal
+import Codec.Compression.Zlib.Proofs
 import Codec.Compression.Zlib.Types
+import Codec.Compression.Zlib.Utilities
 import Data.Buffer
 import Data.Buffer.Core
 import Data.Linear.Token
@@ -10,38 +12,6 @@ import System.Zlib.Error
 import System.Zlib.Types
 
 %default total
-
---------------------------------------------------------------------------------
---          Utilities
---------------------------------------------------------------------------------
-
-||| Wrap the used prefix of a mutable output buffer in an immutable buffer
-||| without copying.
-|||
-||| The mutable buffer must not be used again after this function is called.
-||| This function is safe at its call sites in this module because the output
-||| buffer is freshly allocated by `compressWith`, never escapes the function,
-||| and is discarded immediately after being wrapped.
-|||
-freezeOutput :  (used : Nat)
-             -> IOBuffer capacity
-             -> AnyBuffer
-freezeOutput used output =
-  AB used (unsafeMakeBuffer (unsafeFromMBuffer output))
-
-||| Every natural number is less than or equal to itself.
-|||
-lteReflexive :  (n : Nat)
-             -> LTE n n
-lteReflexive 0     = LTEZero
-lteReflexive (S n) = LTESucc (lteReflexive n)
-
-||| Proof that a full buffer range beginning at offset zero is in bounds.
-|||
-zeroOffsetInBounds :  (n : Nat)
-                   -> LTE (0 + n) n
-zeroOffsetInBounds n =
-  lteReflexive n
 
 --------------------------------------------------------------------------------
 --          Compression

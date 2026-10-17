@@ -1,7 +1,9 @@
 module Codec.Compression.Zlib.Decompress
 
 import Codec.Compression.Zlib.Internal
+import Codec.Compression.Zlib.Proofs
 import Codec.Compression.Zlib.Types
+import Codec.Compression.Zlib.Utilities
 import Data.Array.Index
 import Data.Buffer
 import Data.Buffer.Builder
@@ -26,42 +28,6 @@ import System.Zlib.Types
 private
 inflateChunkSize : Nat
 inflateChunkSize = 32768
-
---------------------------------------------------------------------------------
---          Utilities
---------------------------------------------------------------------------------
-
-||| Wrap the used prefix of a mutable output buffer in an immutable buffer
-||| without copying.
-|||
-||| The mutable buffer must not be used after this operation.
-|||
-private
-freezeOutput :  (used : Nat)
-             -> IOBuffer capacity
-             -> AnyBuffer
-freezeOutput used output =
-  AB used (unsafeMakeBuffer (unsafeFromMBuffer output))
-
-||| Every natural number is less than or equal to itself.
-|||
-private
-lteReflexive : (n : Nat) -> LTE n n
-lteReflexive 0     = LTEZero
-lteReflexive (S n) = LTESucc (lteReflexive n)
-
-||| Proof that a full buffer range beginning at offset zero is in bounds.
-|||
-private
-zeroOffsetInBounds : (n : Nat) -> LTE (0 + n) n
-zeroOffsetInBounds n =
-  lteReflexive n
-
-||| Zero is less than or equal to every natural number.
-|||
-private
-zeroLTE : (n : Nat) -> LTE 0 n
-zeroLTE _ = LTEZero
 
 --------------------------------------------------------------------------------
 --          Decompression

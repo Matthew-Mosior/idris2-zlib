@@ -1,5 +1,6 @@
 module Codec.Compression.Zlib.Types
 
+import Data.Buffer.Core
 import System.Zlib.Types
 
 %default total
@@ -43,3 +44,37 @@ record BufferResult where
   status   : Int
   consumed : Nat
   produced : Nat
+
+--------------------------------------------------------------------------------
+--          Streaming
+--------------------------------------------------------------------------------
+
+||| Result of incrementally compressing input.
+|||
+||| `output` contains zero or more compressed chunks generated while consuming
+||| the supplied input.
+|||
+||| `finished` is true only after zlib has returned `Z_STREAM_END`.
+|||
+public export
+record CompressStreamResult where
+  constructor MkCompressStreamResult
+  output   : List AnyBuffer
+  finished : Bool
+
+||| Result of incrementally decompressing input.
+|||
+||| `consumed` is the number of bytes consumed from the supplied input buffer.
+||| This can be less than the input size when `Z_STREAM_END` is reached, allowing
+||| the caller to retain trailing bytes or begin processing another stream.
+|||
+||| `output` contains zero or more decompressed chunks.
+|||
+||| `finished` is true when zlib returned `Z_STREAM_END`.
+|||
+public export
+record DecompressStreamResult where
+  constructor MkDecompressStreamResult
+  consumed : Nat
+  output   : List AnyBuffer
+  finished : Bool
