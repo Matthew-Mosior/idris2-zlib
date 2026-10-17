@@ -92,7 +92,6 @@ checksumbytes =
 |||
 ||| A zero chunk size returns the complete input as one chunk.
 |||
-private
 chunksOf :  Nat
          -> List a
          -> List (List a)
@@ -113,7 +112,6 @@ chunksOf n@(S _) xs =
 
 ||| Insert empty chunks between existing chunks.
 |||
-private
 withEmptyChunks :  List (List a)
                 -> List (List a)
 withEmptyChunks []        =
@@ -126,7 +124,6 @@ withEmptyChunks (x :: xs) =
 
 ||| Remove the final element from a list.
 |||
-private
 dropLast :  List a
          -> List a
 dropLast []        =
@@ -138,7 +135,6 @@ dropLast (x :: xs) =
 
 ||| Select the one-shot compressor corresponding to a wrapper.
 |||
-private
 oneShotCompress :  Wrapper
                 -> {n : Nat}
                 -> IBuffer n
@@ -152,7 +148,6 @@ oneShotCompress RawWrapper =
 
 ||| Select the one-shot decompressor corresponding to a wrapper.
 |||
-private
 oneShotDecompress :  Wrapper
                   -> {n : Nat}
                   -> IBuffer n
@@ -166,7 +161,6 @@ oneShotDecompress RawWrapper =
 
 ||| Compress a sequence of input chunks and finish the stream.
 |||
-private
 streamCompress :
      Wrapper
   -> List (List Bits8)
@@ -229,7 +223,6 @@ streamCompress wrapper chunks =
 |||
 ||| The returned boolean indicates whether `Z_STREAM_END` was reached.
 |||
-private
 streamDecompress :  Wrapper
                  -> List (List Bits8)
                  -> IO (Either (List ZlibError) (AnyBuffer, Bool))
@@ -297,7 +290,6 @@ streamDecompress wrapper chunks =
 --          Streaming Test Data
 --------------------------------------------------------------------------------
 
-private
 payloadblock : List Bits8
 payloadblock =
   [ 0x00
@@ -320,27 +312,21 @@ payloadblock =
 
 ||| 1 KiB.
 |||
-private
-smallStreamingPayload : List Bits8
-smallStreamingPayload =
-  concat $
-    replicate 64 payloadblock
+smallstreamingpayload : List Bits8
+smallstreamingpayload =
+  concat (replicate 64 payloadblock)
 
 ||| 80 KiB, ensuring several 32 KiB boundaries are crossed.
 |||
-private
-chunkBoundaryPayload : List Bits8
-chunkBoundaryPayload =
-  concat $
-    replicate 5120 payloadblock
+chunkboundarypayload : List Bits8
+chunkboundarypayload =
+  concat (replicate 5120 payloadblock)
 
 ||| 144,000 bytes: comfortably over 100 KiB.
 |||
-private
-largeStreamingPayload : List Bits8
-largeStreamingPayload =
-  concat $
-    replicate 9000 payloadblock
+largestreamingpayload : List Bits8
+largestreamingpayload =
+  concat (replicate 9000 payloadblock)
 
 --------------------------------------------------------------------------------
 --          Round-trip Tests
@@ -615,11 +601,200 @@ testCrc32BinaryIncremental = do
 --          Streaming Tests
 --------------------------------------------------------------------------------
 
-testOneByteStreamingCompressOneShotDecompress : TestT IO ()
-testOneByteStreamingCompressOneShotDecompress = do
-  compressed <- evalZlib (streamCompress ZlibWrapper (chunksOf 1 smallStreamingPayload))
-  decoded    <- evalZlib (decompress compressed.ibuf)
-  unpack decoded === smallStreamingPayload
+||| Compress and decompress using one-byte input chunks.
+|||
+testStreamingOneByteChunks : TestT IO ()
+testStreamingOneByteChunks = do
+  compressed          <- evalZlib (streamCompress ZlibWrapper (chunksOf 1 smallstreamingpayload))
+  (decoded, finished) <- evalZlib (streamDecompress ZlibWrapper (chunksOf 1 (unpack compressed)))
+  finished === True
+  unpack decoded === smallstreamingpayload
+
+||| Compress and decompress using seven-byte input chunks.
+|||
+testStreamingSevenByteChunks : TestT IO ()
+testStreamingSevenByteChunks = do
+  compressed          <- evalZlib (streamCompress ZlibWrapper (chunksOf 7 smallstreamingpayload))
+  (decoded, finished) <- evalZlib (streamDecompress ZlibWrapper (chunksOf 7 (unpack compressed)))
+  finished === True
+  unpack decoded === smallstreamingpayload
+
+||| Exercise streaming compression and decompression using 32 KiB chunks.
+|||
+testStreaming32KiBChunks : TestT IO ()
+testStreaming32KiBChunks = do
+  compressed          <- evalZlib (streamCompress ZlibWrapper (chunksOf 32768 chunkboundarypayload))
+  (decoded, finished) <- evalZlib (streamDecompress ZlibWrapper (chunksOf 32768 (unpack compressed)))
+  finished === True
+  unpack decoded === chunkboundarypayload
+
+||| Exercise a payload comfortably larger than 100 KiB.
+|||
+testStreamingLargePayload : TestT IO ()
+testStreamingLargePayload = do
+  compressed          <- evalZlib (streamCompress ZlibWrapper (chunksOf 4096 largestreamingpayload))
+  (decoded, finished) <- evalZlib (streamDecompress ZlibWrapper (chunksOf 4096 (unpack compressed)))
+  finished === True
+  unpack decoded === largestreamingpayload
+
+||| Ensure empty chunks can occur between non-empty chunks without affecting
+||| the stream.
+|||
+testStreamingEmptyChunks : TestT IO ()
+testStreamingEmptyChunks = do
+  let inputchunks      = withEmptyChunks (chunksOf 7 smallstreamingpayload)
+  compressed           <- evalZlib (streamCompress ZlibWrapper inputchunks)
+  let compressedChunks = withEmptyChunks (chunksOf 5 (unpack compressed))
+  (decoded, finished)  <- evalZlib (streamDecompress ZlibWrapper compressedChunks)
+  finished === True
+  unpack decoded === smallstreamingpayload
+
+--------------------------------------------------------------------------------
+--          Wrapper Tests
+--------------------------------------------------------------------------------
+
+streamingWrapperRoundTrip :  Wrapper
+                          -> TestT IO ()
+streamingWrapperRoundTrip wrapper = do
+  compressed          <- evalZlib (streamCompress wrapper (chunksOf 13 smallstreamingpayload))
+  (decoded, finished) <- evalZlib (streamDecompress wrapper (chunksOf 11 (unpack compressed)))
+  finished === True
+  unpack decoded === smallstreamingpayload
+
+||| Streaming round trip using the zlib wrapper.
+|||
+testStreamingZlibWrapper : TestT IO ()
+testStreamingZlibWrapper =
+  streamingWrapperRoundTrip ZlibWrapper
+
+||| Streaming round trip using the gzip wrapper.
+|||
+testStreamingGzipWrapper : TestT IO ()
+testStreamingGzipWrapper =
+  streamingWrapperRoundTrip GZipWrapper
+
+||| Streaming round trip using raw DEFLATE.
+|||
+testStreamingRawWrapper : TestT IO ()
+testStreamingRawWrapper =
+  streamingWrapperRoundTrip RawWrapper
+
+--------------------------------------------------------------------------------
+--          Streaming -> Streaming
+--------------------------------------------------------------------------------
+
+||| Compress incrementally, finish the compressor, and then decompress
+||| incrementally.
+|||
+testStreamingCompressStreamingDecompress : TestT IO ()
+testStreamingCompressStreamingDecompress = do
+  compressed          <- evalZlib (streamCompress ZlibWrapper (chunksOf 17 chunkboundarypayload))
+  (decoded, finished) <- evalZlib (streamDecompress ZlibWrapper (chunksOf 19 (unpack compressed)))
+  finished === True
+  unpack decoded === chunkboundarypayload
+
+--------------------------------------------------------------------------------
+--          Streaming -> One-Shot
+--------------------------------------------------------------------------------
+
+streamingCompressOneShotDecompress :  Wrapper
+                                   -> TestT IO ()
+streamingCompressOneShotDecompress wrapper = do
+  compressed <- evalZlib (streamCompress wrapper (chunksOf 7 smallstreamingpayload))
+  decoded    <- evalZlib (oneShotDecompress wrapper compressed.ibuf)
+  unpack decoded === smallstreamingpayload
+
+testStreamingZlibCompressOneShotDecompress : TestT IO ()
+testStreamingZlibCompressOneShotDecompress =
+  streamingCompressOneShotDecompress ZlibWrapper
+
+testStreamingGzipCompressOneShotDecompress : TestT IO ()
+testStreamingGzipCompressOneShotDecompress =
+  streamingCompressOneShotDecompress GZipWrapper
+
+testStreamingRawCompressOneShotDecompress : TestT IO ()
+testStreamingRawCompressOneShotDecompress =
+  streamingCompressOneShotDecompress RawWrapper
+
+--------------------------------------------------------------------------------
+--          One-Shot -> Streaming
+--------------------------------------------------------------------------------
+
+oneShotCompressStreamingDecompress :  Wrapper
+                                   -> TestT IO ()
+oneShotCompressStreamingDecompress wrapper = do
+  compressed          <- evalZlib (oneShotCompress wrapper (bufferL smallstreamingpayload))
+  (decoded, finished) <- evalZlib (streamDecompress wrapper (chunksOf 7 (unpack compressed)))
+  finished === True
+  unpack decoded === smallstreamingpayload
+
+testOneShotZlibCompressStreamingDecompress : TestT IO ()
+testOneShotZlibCompressStreamingDecompress =
+  oneShotCompressStreamingDecompress ZlibWrapper
+
+testOneShotGzipCompressStreamingDecompress : TestT IO ()
+testOneShotGzipCompressStreamingDecompress =
+  oneShotCompressStreamingDecompress GZipWrapper
+
+testOneShotRawCompressStreamingDecompress : TestT IO ()
+testOneShotRawCompressStreamingDecompress =
+  oneShotCompressStreamingDecompress RawWrapper
+
+--------------------------------------------------------------------------------
+--          Truncation
+--------------------------------------------------------------------------------
+
+||| A streaming decompressor must not treat exhaustion of the currently
+||| supplied input as proof that the compressed stream has ended.
+|||
+||| Removing the final byte from a valid stream should therefore leave the
+||| decompressor unfinished rather than producing `Z_STREAM_END`.
+|||
+testStreamingTruncatedInputUnfinished : TestT IO ()
+testStreamingTruncatedInputUnfinished = do
+  compressed    <- evalZlib (compress (bufferL smallstreamingpayload))
+  let truncated = dropLast (unpack compressed)
+  result        <- evalZlib ( withStreamingDecompressor ZlibWrapper
+                                                        $ \stream =>
+                                                            decompressChunk
+                                                              stream
+                                                              (bufferL truncated)
+                            )
+  result.finished === False
+
+--------------------------------------------------------------------------------
+--          Trailing Input
+--------------------------------------------------------------------------------
+
+||| Bytes following `Z_STREAM_END` must remain unconsumed.
+|||
+||| This is required for callers that embed a compressed stream inside a
+||| larger framing protocol or need to process concatenated/trailing data.
+|||
+testStreamingTrailingBytesUnconsumed : TestT IO ()
+testStreamingTrailingBytesUnconsumed = do
+  compressed <- evalZlib (compress (bufferL smallstreamingpayload))
+  let compressedBytes : List Bits8
+      compressedBytes = unpack compressed
+      trailing : List Bits8
+      trailing =
+        [ 0xde
+        , 0xad
+        , 0xbe
+        , 0xef
+        ]
+      combined : List Bits8
+      combined = compressedBytes ++ trailing
+  result <- evalZlib ( withStreamingDecompressor ZlibWrapper
+                                                 $ \stream =>
+                                                     decompressChunk
+                                                       stream
+                                                       (bufferL combined)
+                     )
+  result.finished === True
+  result.consumed === length compressedBytes
+  assert (result.consumed < length combined)
+  assert ((length combined `minus` result.consumed) == length trailing)
 
 --------------------------------------------------------------------------------
 --          Main
@@ -652,7 +827,23 @@ main = do
       , ("CRC-32 incremental", testCrc32Incremental)
       , ("Adler-32 incremental", testAdler32Incremental)
       , ("CRC-32 binary incremental", testCrc32BinaryIncremental)
-      , ("streaming 1-byte chunks", testOneByteStreamingCompressOneShotDecompress)
+      , ("streaming 1-byte chunks", testStreamingOneByteChunks)
+      , ("streaming 7-byte chunks", testStreamingSevenByteChunks)
+      , ("streaming 32 KiB chunks", testStreaming32KiBChunks)
+      , ("streaming >100 KiB payload", testStreamingLargePayload)
+      , ("streaming empty chunks", testStreamingEmptyChunks)
+      , ("streaming zlib wrapper", testStreamingZlibWrapper)
+      , ("streaming gzip wrapper", testStreamingGzipWrapper)
+      , ("streaming raw DEFLATE wrapper", testStreamingRawWrapper)
+      , ("streaming compress -> streaming decompress", testStreamingCompressStreamingDecompress)
+      , ("streaming zlib compress -> one-shot decompress", testStreamingZlibCompressOneShotDecompress)
+      , ("streaming gzip compress -> one-shot decompress", testStreamingGzipCompressOneShotDecompress)
+      , ("streaming raw compress -> one-shot decompress", testStreamingRawCompressOneShotDecompress)
+      , ("one-shot zlib compress -> streaming decompress", testOneShotZlibCompressStreamingDecompress)
+      , ("one-shot gzip compress -> streaming decompress", testOneShotGzipCompressStreamingDecompress)
+      , ("one-shot raw compress -> streaming decompress", testOneShotRawCompressStreamingDecompress)
+      , ("truncated streaming input remains unfinished", testStreamingTruncatedInputUnfinished)
+      , ("trailing bytes remain unconsumed", testStreamingTrailingBytesUnconsumed)
       ]
   case ok of
     True =>
