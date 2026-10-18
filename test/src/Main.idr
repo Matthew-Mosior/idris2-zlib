@@ -161,10 +161,9 @@ oneShotDecompress RawWrapper =
 
 ||| Compress a sequence of input chunks and finish the stream.
 |||
-streamCompress :
-     Wrapper
-  -> List (List Bits8)
-  -> IO (Either (List ZlibError) AnyBuffer)
+streamCompress :  Wrapper
+               -> List (List Bits8)
+               -> IO (Either (List ZlibError) AnyBuffer)
 streamCompress wrapper chunks =
   withStreamingCompressor
     DefaultCompression
@@ -172,22 +171,18 @@ streamCompress wrapper chunks =
     $ \stream =>
         feed stream chunks []
   where
-    feed :
-         StreamingCompressor
-      -> List (List Bits8)
-      -> List AnyBuffer
-      -> IO (Either (List ZlibError) AnyBuffer)
-
-    feed stream [] acc = do
+    feed :  StreamingCompressor
+         -> List (List Bits8)
+         -> List AnyBuffer
+         -> IO (Either (List ZlibError) AnyBuffer)
+    feed stream []              acc = do
       Right result <- finishCompressor stream
         | Left errs =>
             pure (Left errs)
-
       pure $
         Right $
           Data.Buffer.Builder.fastConcat
             (acc ++ result.output)
-
     feed stream (bytes :: rest) acc = do
       Right result <-
         compressChunk
@@ -195,23 +190,16 @@ streamCompress wrapper chunks =
           (bufferL bytes)
         | Left errs =>
             pure (Left errs)
-
-      let acc' =
-            acc ++ result.output
-
-          (_, remaining) =
-            splitAt result.consumed bytes
-
+      let acc'           = acc ++ result.output
+          (_, remaining) = splitAt result.consumed bytes
       case remaining of
         [] =>
           feed stream rest acc'
-
         _ =>
           case rest of
-            [] =>
+            []           =>
               assert_total $
                 feed stream [remaining] acc'
-
             next :: more =>
               assert_total $
                 feed
@@ -251,13 +239,10 @@ streamDecompress wrapper chunks =
         | Left errs =>
             pure (Left errs)
       let acc'           : List AnyBuffer
-          acc'           =
-            reverse result.output ++ acc
+          acc'           = reverse result.output ++ acc
           consumed'      : Nat
-          consumed'      =
-            result.consumed
-          remaining      =
-            splitAt consumed' bytes
+          consumed'      = result.consumed
+          remaining      = splitAt consumed' bytes
       case result.finished of
         True =>
           pure
