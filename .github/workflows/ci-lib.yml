@@ -27,6 +27,14 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v2
+      - name: Install dependencies
+        run: |
+          set -euxo pipefail
+          brew install gmp llvm lld
+          LLD_PREFIX="$(brew --prefix lld)"
+          echo "$LLD_PREFIX/bin" >> "$GITHUB_PATH"
+          PATH="$LLD_PREFIX/bin:$PATH"
+          export PATH
       - name: Build lib
         run: pack --no-prompt install zlib
       - name: Run test
