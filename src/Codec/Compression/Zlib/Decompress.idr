@@ -106,7 +106,7 @@ decompressWith wrapper input =
       Right chunks' <- chunkresult
         | Left errs =>
             pure (Left errs)
-      case status result == Z_STREAM_END of
+      case status result == (zlibconstantToInt Z_STREAM_END) of
         True  =>
           pure
             ( Right

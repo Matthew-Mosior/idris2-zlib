@@ -66,7 +66,7 @@ compressWith level wrapper input =
         Finish
       | Left errs =>
           pure (Left errs)
-    case status result == Z_STREAM_END of
+    case status result == (zlibconstantToInt Z_STREAM_END) of
       False => do
         errs <- mkError "Codec.Compression.Zlib.Compress.compressWith"
                         ( "Expected Z_STREAM_END after single-pass compression, but zlib returned "

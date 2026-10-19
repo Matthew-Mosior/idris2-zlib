@@ -37,23 +37,23 @@ export
 zlibStatusMessage :  Int
                   -> String
 zlibStatusMessage status =
-  if status == Z_OK then
+  if status == (zlibconstantToInt Z_OK) then
     "Z_OK"
-  else if status == Z_STREAM_END then
+  else if status == (zlibconstantToInt Z_STREAM_END) then
     "Z_STREAM_END"
-  else if status == Z_NEED_DICT then
+  else if status == (zlibconstantToInt Z_NEED_DICT) then
     "Z_NEED_DICT"
-  else if status == Z_ERRNO then
+  else if status == (zlibconstantToInt Z_ERRNO) then
     "Z_ERRNO"
-  else if status == Z_STREAM_ERROR then
+  else if status == (zlibconstantToInt Z_STREAM_ERROR) then
     "Z_STREAM_ERROR"
-  else if status == Z_DATA_ERROR then
+  else if status == (zlibconstantToInt Z_DATA_ERROR) then
     "Z_DATA_ERROR"
-  else if status == Z_MEM_ERROR then
+  else if status == (zlibconstantToInt Z_MEM_ERROR) then
     "Z_MEM_ERROR"
-  else if status == Z_BUF_ERROR then
+  else if status == (zlibconstantToInt Z_BUF_ERROR) then
     "Z_BUF_ERROR"
-  else if status == Z_VERSION_ERROR then
+  else if status == (zlibconstantToInt Z_VERSION_ERROR) then
     "Z_VERSION_ERROR"
   else
     "Unknown zlib status: " ++ show status

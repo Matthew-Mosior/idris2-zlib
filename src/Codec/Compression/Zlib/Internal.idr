@@ -36,12 +36,12 @@ createCompressor level wrapper = do
   status <- primIO ( prim__deflateInit2
                      ptr
                      (zlibCompressionLevelValue level)
-                     Z_DEFLATED
+                     (zlibconstantToInt Z_DEFLATED)
                      (windowBits wrapper)
-                     Z_DEFAULT_MEM_LEVEL
+                     (zlibconstantToInt Z_DEFAULT_MEM_LEVEL)
                      (strategyValue DefaultStrategy)
                    )
-  case status == Z_OK of
+  case status == (zlibconstantToInt Z_OK) of
     True  =>
       pure (Right (MkCompressor (MkZStreamHandle ptr)))
     False => do
@@ -81,7 +81,7 @@ createDecompressor :  Wrapper
 createDecompressor wrapper = do
   ptr    <- primIO prim__newStream
   status <- primIO (prim__inflateInit2 ptr (windowBits wrapper))
-  case status == Z_OK of
+  case status == (zlibconstantToInt Z_OK) of
     True  =>
       pure (Right (MkDecompressor (MkZStreamHandle ptr)))
     False => do
@@ -282,7 +282,7 @@ deflateBuffer (MkCompressor (MkZStreamHandle ptr)) inputoffset inputlength input
                    )
   consumed <- primIO (prim__consumed ptr)
   produced <- primIO (prim__produced ptr)
-  case status == Z_OK || status == Z_STREAM_END || status == Z_BUF_ERROR of
+  case status == (zlibconstantToInt Z_OK) || status == (zlibconstantToInt Z_STREAM_END) || status == (zlibconstantToInt Z_BUF_ERROR) of
     True  =>
       pure (Right (MkBufferResult status (cast consumed) (cast produced)))
     False => do
@@ -329,7 +329,7 @@ inflateBuffer (MkDecompressor (MkZStreamHandle ptr)) inputoffset inputlength inp
                    )
   consumed <- primIO (prim__consumed ptr)
   produced <- primIO (prim__produced ptr)
-  case status == Z_OK || status == Z_STREAM_END || status == Z_BUF_ERROR of
+  case status == (zlibconstantToInt Z_OK) || status == (zlibconstantToInt Z_STREAM_END) || status == (zlibconstantToInt Z_BUF_ERROR) of
     True  =>
       pure (Right (MkBufferResult status (cast consumed) (cast produced)))
     False => do
