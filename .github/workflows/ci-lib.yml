@@ -32,10 +32,6 @@ jobs:
           set -euxo pipefail
           apt update
           apt install -y lld
-          LLD_PREFIX="$(brew --prefix lld)"
-          echo "$LLD_PREFIX/bin" >> "$GITHUB_PATH"
-          PATH="$LLD_PREFIX/bin:$PATH"
-          export PATH
       - name: Build lib
         run: pack --no-prompt install zlib
       - name: Run test
