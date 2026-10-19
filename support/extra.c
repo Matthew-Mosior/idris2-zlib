@@ -2,7 +2,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
-#include <zlib.h>
+#include "zlib.h"
 
 typedef struct {
     z_stream stream;
