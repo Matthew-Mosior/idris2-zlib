@@ -31,7 +31,7 @@ jobs:
         run: |
           set -euxo pipefail
           apt update
-          apt install lld
+          apt install -y lld
           LLD_PREFIX="$(brew --prefix lld)"
           echo "$LLD_PREFIX/bin" >> "$GITHUB_PATH"
           PATH="$LLD_PREFIX/bin:$PATH"
