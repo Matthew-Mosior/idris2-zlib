@@ -30,7 +30,7 @@ jobs:
       - name: Install dependencies
         run: |
           set -euxo pipefail
-          brew install gmp llvm lld
+          sudo apt-get install lld
           LLD_PREFIX="$(brew --prefix lld)"
           echo "$LLD_PREFIX/bin" >> "$GITHUB_PATH"
           PATH="$LLD_PREFIX/bin:$PATH"
