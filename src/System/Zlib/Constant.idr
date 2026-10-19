@@ -21,16 +21,16 @@ data ZlibConstant
 export
 zlibconstantToInt :  ZlibConstant
                   -> Int
-zlibconstantToInt Z_OK = 0
-zlibconstantToInt Z_STREAM_END = 1
-zlibconstantToInt Z_FINISH = 4
-zlibconstantToInt Z_NEED_DICT = 2
-zlibconstantToInt Z_ERRNO = -1
-zlibconstantToInt Z_STREAM_ERROR = -2
-zlibconstantToInt Z_DATA_ERROR = -3
-zlibconstantToInt Z_MEM_ERROR = -4
-zlibconstantToInt Z_BUF_ERROR = -5
-zlibconstantToInt Z_VERSION_ERROR = -6
-zlibconstantToInt Z_DEFLATED = 8
-zlibconstantToInt Z_DEFAULT_STRATEGY = 0
+zlibconstantToInt Z_OK                = 0
+zlibconstantToInt Z_STREAM_END        = 1
+zlibconstantToInt Z_FINISH            = 4
+zlibconstantToInt Z_NEED_DICT         = 2
+zlibconstantToInt Z_ERRNO             = -1
+zlibconstantToInt Z_STREAM_ERROR      = -2
+zlibconstantToInt Z_DATA_ERROR        = -3
+zlibconstantToInt Z_MEM_ERROR         = -4
+zlibconstantToInt Z_BUF_ERROR         = -5
+zlibconstantToInt Z_VERSION_ERROR     = -6
+zlibconstantToInt Z_DEFLATED          = 8
+zlibconstantToInt Z_DEFAULT_STRATEGY  = 0
 zlibconstantToInt Z_DEFAULT_MEM_LEVEL = 8
