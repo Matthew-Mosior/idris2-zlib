@@ -9,7 +9,6 @@ import Data.String
 import Hedgehog
 import System
 import System.Zlib.Error
-import System.Zlib.Constants
 import System.Zlib.Raw
 import System.Zlib.Types
 

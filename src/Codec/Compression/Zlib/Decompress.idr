@@ -9,7 +9,7 @@ import Data.Buffer
 import Data.Buffer.Builder
 import Data.Buffer.Core
 import Data.Nat
-import System.Zlib.Constants
+import System.Zlib.Constant
 import System.Zlib.Error
 import System.Zlib.Types
 

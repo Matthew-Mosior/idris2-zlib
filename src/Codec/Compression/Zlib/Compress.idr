@@ -7,7 +7,7 @@ import Codec.Compression.Zlib.Utilities
 import Data.Buffer
 import Data.Buffer.Core
 import Data.Linear.Token
-import System.Zlib.Constants
+import System.Zlib.Constant
 import System.Zlib.Error
 import System.Zlib.Types
 

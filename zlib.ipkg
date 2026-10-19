@@ -20,7 +20,7 @@ modules    = Codec.Compression.Zlib.Checksum
            , Codec.Compression.Zlib.Types
            , Codec.Compression.Zlib.Utilities
            , Codec.Compression.Zlib
-           , System.Zlib.Constants
+           , System.Zlib.Constant
            , System.Zlib.Error
            , System.Zlib.Raw
            , System.Zlib.Types

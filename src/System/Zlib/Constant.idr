@@ -1,4 +1,4 @@
-module System.Zlib.Constants
+module System.Zlib.Constant
 
 ||| Constants that zlib defines.
 |||

@@ -9,7 +9,6 @@ import Data.Buffer.Core
 import Data.Buffer.Indexed
 import Data.Linear.Token
 import Data.Nat
-import System.Zlib.Constants
 import System.Zlib.Error
 import System.Zlib.Types
 

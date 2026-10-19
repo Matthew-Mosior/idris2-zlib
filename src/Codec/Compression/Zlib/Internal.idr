@@ -10,7 +10,7 @@ import Data.Linear.Token
 import System.Posix.Timer
 import System.Posix.Timer.Prim
 import System.FFI
-import System.Zlib.Constants
+import System.Zlib.Constant
 import System.Zlib.Error
 import System.Zlib.Types
 import System.Zlib.Raw
