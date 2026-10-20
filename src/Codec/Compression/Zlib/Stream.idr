@@ -24,8 +24,8 @@ import System.Zlib.Types
 ||| allowing arbitrarily large streams to be processed incrementally.
 |||
 private
-streamChunkSize : Nat
-streamChunkSize = 32768
+streamchunksize : Nat
+streamchunksize = 32768
 
 --------------------------------------------------------------------------------
 --          Stream Handles
@@ -149,7 +149,7 @@ compressInput (MkStreamingCompressor compressor) flush input =
                 False =>
                   -- All input has been consumed.  If the output buffer was
                   -- completely filled, zlib may still have pending output.
-                  case produced' == streamChunkSize of
+                  case produced' == streamchunksize of
                     True =>
                       assert_total (go nextoffset nextbounds chunks')
                     False =>
@@ -174,7 +174,7 @@ compressInput (MkStreamingCompressor compressor) flush input =
       go inputoffset offsetbounds chunks = do
         let inputlength : Nat
             inputlength = n `minus` inputoffset
-        output         <- mbuffer streamChunkSize
+        output         <- mbuffer streamchunksize
         Right result   <-
           deflateBuffer
             compressor
@@ -183,9 +183,9 @@ compressInput (MkStreamingCompressor compressor) flush input =
             input
             {inputbounds = plusMinusLTE inputoffset n offsetbounds}
             0
-            streamChunkSize
+            streamchunksize
             output
-            {outputbounds = zeroOffsetInBounds streamChunkSize}
+            {outputbounds = zeroOffsetInBounds streamchunksize}
             flush
           | Left errs =>
               pure (Left errs)
@@ -284,7 +284,7 @@ finishCompressor (MkStreamingCompressor compressor) =
     finish :  List AnyBuffer
            -> IO (Either (List ZlibError) CompressStreamResult)
     finish chunks = do
-      output        <- mbuffer streamChunkSize
+      output        <- mbuffer streamchunksize
       Right result  <-
         deflateBuffer
           compressor
@@ -293,9 +293,9 @@ finishCompressor (MkStreamingCompressor compressor) =
           dummyInput
           {inputbounds = LTEZero}
           0
-          streamChunkSize
+          streamchunksize
           output
-          {outputbounds = zeroOffsetInBounds streamChunkSize}
+          {outputbounds = zeroOffsetInBounds streamchunksize}
           Finish
         | Left errs =>
             pure (Left errs)
@@ -379,7 +379,7 @@ decompressChunk (MkStreamingDecompressor decompressor) input =
                 -- output buffer filled completely, inflate may still have
                 -- output pending that can be emitted without additional
                 -- input.
-                case produced' == streamChunkSize of
+                case produced' == streamchunksize of
                   True  =>
                     assert_total (go nextoffset nextbounds chunks')
                   False =>
@@ -398,7 +398,7 @@ decompressChunk (MkStreamingDecompressor decompressor) input =
       go inputoffset offsetbounds chunks = do
         let inputlength : Nat
             inputlength = n `minus` inputoffset
-        output          <- mbuffer streamChunkSize
+        output          <- mbuffer streamchunksize
         Right result    <-
           inflateBuffer
             decompressor
@@ -407,9 +407,9 @@ decompressChunk (MkStreamingDecompressor decompressor) input =
             input
             {inputbounds = plusMinusLTE inputoffset n offsetbounds}
             0
-            streamChunkSize
+            streamchunksize
             output
-            {outputbounds = zeroOffsetInBounds streamChunkSize}
+            {outputbounds = zeroOffsetInBounds streamchunksize}
             NoFlush
           | Left errs =>
               pure (Left errs)

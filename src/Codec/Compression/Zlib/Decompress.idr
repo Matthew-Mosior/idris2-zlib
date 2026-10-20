@@ -26,8 +26,8 @@ import System.Zlib.Types
 ||| concatenated after `Z_STREAM_END` is reached.
 |||
 private
-inflateChunkSize : Nat
-inflateChunkSize = 32768
+inflatechunksize : Nat
+inflatechunksize = 32768
 
 --------------------------------------------------------------------------------
 --          Decompression
@@ -68,7 +68,7 @@ decompressWith wrapper input =
     go decompressor inputoffset offsetbounds chunks = do
       let inputlength : Nat
           inputlength = n `minus` inputoffset
-      output       <- mbuffer inflateChunkSize
+      output       <- mbuffer inflatechunksize
       Right result <-
         inflateBuffer
           decompressor
@@ -77,9 +77,9 @@ decompressWith wrapper input =
           input
           {inputbounds = plusMinusLTE inputoffset n offsetbounds}
           0
-          inflateChunkSize
+          inflatechunksize
           output
-          {outputbounds = zeroOffsetInBounds inflateChunkSize}
+          {outputbounds = zeroOffsetInBounds inflatechunksize}
           NoFlush
         | Left errs =>
             pure (Left errs)
@@ -95,7 +95,7 @@ decompressWith wrapper input =
               0 =>
                 pure (Right chunks)
               _ =>
-                case isLTE produced' inflateChunkSize of
+                case isLTE produced' inflatechunksize of
                   No _               => do
                     errs <- mkError "Codec.Compression.Zlib.Decompress.decompressWith.go"
                                     "inflate reported producing bytes beyond the output buffer"
