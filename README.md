@@ -37,6 +37,7 @@ This library provides a type-safe Idris2 binding to [zlib](https://github.com/ma
 
 ### Overall architecture
 
+```mermaid
 flowchart TB
     User["User Code"]
 
@@ -109,9 +110,11 @@ flowchart TB
     InflateBridge --> Inflate
     BoundBridge --> Bound
     ChecksumBridge --> Checksums
+```
 
 ### Streaming compression/decompression model
 
+```mermaid
 flowchart LR
     subgraph Compression["Streaming Compression"]
         CInput["IBuffer input chunk"]
@@ -169,9 +172,11 @@ flowchart LR
 
         DEnd --> DTrailing
     end
+```
 
 ### Buffer ownership model
 
+```mermaid
 flowchart TB
     Input["Immutable IBuffer n"]
     Mutable["Mutable IOBuffer capacity"]
@@ -217,9 +222,11 @@ flowchart TB
 
     Clear --> Input
     Clear --> Mutable
+```
 
 ### One-shot versus Streaming API
 
+```mermaid
 flowchart TB
     Input["Input Buffer"]
 
@@ -260,6 +267,7 @@ flowchart TB
 
     SDecompress --> InflateCalls
     InflateCalls --> ChunkOutputs
+```
 
 ## API
 
