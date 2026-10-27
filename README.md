@@ -33,7 +33,7 @@ This library provides a type-safe Idris2 binding to [zlib](https://github.com/ma
     -  Large payloads
     -  Trailing bytes
  
- ## Architecture
+## Architecture
 
 ### Overall architecture
 
