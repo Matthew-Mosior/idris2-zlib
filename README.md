@@ -271,8 +271,18 @@ flowchart TB
 
 ## API
 
-- `Codec.Compression.Zlib`: Top-level re-exporter.  This is the simplest import for most users who want compression, decompression, streaming, and checksum functionality in one place.
-- `Codec.Compression.Zlib.Compress`: One-shot compression API.  It provides whole-buffer compression using zlib, gzip, or raw DEFLATE wrappers, with support for configurable compression levels and related options.
-- `Codec.Compression.Zlib.Decompress`: One-shot decompression API.  It accepts complete compressed buffers and expands them using zlib, gzip, or raw DEFLATE semantics, returning an error for malformed, truncated, or wrapper-mismatched input.
-- `Codec.Compression.Zlib.Stream`:  Incremental compression and decompression. It exposes scoped `StreamingCompressor` and `StreamingDecompressor` handles, chunk-based operations such as `compressChunk` / `decompressChunk`, explicit `consumed` counts, produced output chunks, `finished` state, and `finishCompressor` for completing a compression stream.
-- `Codec.Compression.Zlib.Checksum`:  CRC-32 and Adler-32 support. It provides both one-shot checksum functions and incremental update functions for processing data piece-by-piece.
+- `Codec.Compression.Zlib`
+  - Top-level re-exporter.
+  - This is the simplest import for most users who want compression, decompression, streaming, and checksum functionality in one place.
+- `Codec.Compression.Zlib.Compress`
+  - One-shot compression API.
+  - It provides whole-buffer compression using zlib, gzip, or raw DEFLATE wrappers, with support for configurable compression levels and related options.
+- `Codec.Compression.Zlib.Decompress`
+  - One-shot decompression API.
+  - It accepts complete compressed buffers and expands them using zlib, gzip, or raw DEFLATE semantics, returning an error for malformed, truncated, or wrapper-mismatched input.
+- `Codec.Compression.Zlib.Stream`
+  - Incremental compression and decompression.
+  - It exposes scoped `StreamingCompressor` and `StreamingDecompressor` handles, chunk-based operations such as `compressChunk` / `decompressChunk`, explicit `consumed` counts, produced output chunks, `finished` state, and `finishCompressor` for completing a compression stream.
+- `Codec.Compression.Zlib.Checksum`
+  - CRC-32 and Adler-32 support.
+  - It provides both one-shot checksum functions and incremental update functions for processing data piece-by-piece.
