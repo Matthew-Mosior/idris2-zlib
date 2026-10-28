@@ -4,35 +4,35 @@ This library provides a type-safe Idris2 binding to [zlib](https://github.com/ma
 
 ## Features
 
--   zlib, gzip, and raw DEFLATE support for compression and decompression.
--   One-shot APIs for simple whole-buffer compression and decompression.
--   Streaming compression and decompression APIs with explicit consumed/produced byte tracking.
--   Configurable compression levels including no compression, best speed, best compression, and custom levels.
--   Configurable zlib strategies such as default, filtered, Huffman-only, RLE, and fixed.
--   Flush-mode support including NoFlush, SyncFlush, FullFlush, Finish, and others.
--   Direct C FFI integration without Scheme-level foreign-procedure wrappers.
--   Type-safe buffer handling using Idris2 indexed buffers and explicit bounds proofs.
--   Proof-aware input/output regions to ensure FFI calls stay within buffer bounds.
--   Safe native resource management for z_stream lifetimes using bracketed cleanup.
--   Incremental CRC-32 and Adler-32 checksums, plus convenient one-shot checksum functions.
--   Portable ABI normalization around zlib types such as uInt and uLong.
--   Accurate streaming progress reporting through consumed, produced, status, and finished-state information.
--   Preservation of trailing input bytes after Z_STREAM_END, useful for framed protocols and concatenated data.
--   Efficient fixed-size output chunking for decompression and streaming operations.
--   No repeated grow-and-copy strategy for large decompression workloads.
--   Safe ownership of streaming output buffers by copying produced prefixes before retaining immutable chunks.
--   Support for very small chunk sizes, including validated 1-byte streaming input.
--   Comprehensive interoperability tests
-    -  Streaming
-    -  Streaming to one-shot
-    -  One-shot to streaming
-    -  Empty input
-    -  Truncated streams
-    -  Wrapper mismatches
-    -  Invalid compressed data
-    -  Large payloads
-    -  Trailing bytes
- 
+- zlib, gzip, and raw DEFLATE support for compression and decompression.
+- One-shot APIs for simple whole-buffer compression and decompression.
+- Streaming compression and decompression APIs with explicit consumed/produced byte tracking.
+- Configurable compression levels including no compression, best speed, best compression, and custom levels.
+- Configurable zlib strategies such as default, filtered, Huffman-only, RLE, and fixed.
+- Flush-mode support including NoFlush, SyncFlush, FullFlush, Finish, and others.
+- Direct C FFI integration without Scheme-level foreign-procedure wrappers.
+- Type-safe buffer handling using Idris2 indexed buffers and explicit bounds proofs.
+- Proof-aware input/output regions to ensure FFI calls stay within buffer bounds.
+- Safe native resource management for z_stream lifetimes using bracketed cleanup.
+- Incremental CRC-32 and Adler-32 checksums, plus convenient one-shot checksum functions.
+- Portable ABI normalization around zlib types such as uInt and uLong.
+- Accurate streaming progress reporting through consumed, produced, status, and finished-state information.
+- Preservation of trailing input bytes after Z_STREAM_END, useful for framed protocols and concatenated data.
+- Efficient fixed-size output chunking for decompression and streaming operations.
+- No repeated grow-and-copy strategy for large decompression workloads.
+- Safe ownership of streaming output buffers by copying produced prefixes before retaining immutable chunks.
+- Support for very small chunk sizes, including validated 1-byte streaming input.
+- Comprehensive interoperability tests
+  - Streaming
+  - Streaming to one-shot
+  - One-shot to streaming
+  - Empty input
+  - Truncated streams
+  - Wrapper mismatches
+  - Invalid compressed data
+  - Large payloads
+  - Trailing bytes
+
 ## Architecture
 
 ### Overall architecture
@@ -271,8 +271,8 @@ flowchart TB
 
 ## API
 
--   `Codec.Compression.Zlib`: Top-level re-exporter.  This is the simplest import for most users who want compression, decompression, streaming, and checksum functionality in one place.
--   `Codec.Compression.Zlib.Compress`: One-shot compression API.  It provides whole-buffer compression using zlib, gzip, or raw DEFLATE wrappers, with support for configurable compression levels and related options.
--   `Codec.Compression.Zlib.Decompress`: One-shot decompression API.  It accepts complete compressed buffers and expands them using zlib, gzip, or raw DEFLATE semantics, returning an error for malformed, truncated, or wrapper-mismatched input.
--   `Codec.Compression.Zlib.Stream`:  Incremental compression and decompression. It exposes scoped `StreamingCompressor` and `StreamingDecompressor` handles, chunk-based operations such as `compressChunk` / `decompressChunk`, explicit `consumed` counts, produced output chunks, `finished` state, and `finishCompressor` for completing a compression stream.
--  `Codec.Compression.Zlib.Checksum`:  CRC-32 and Adler-32 support. It provides both one-shot checksum functions and incremental update functions for processing data piece-by-piece.
+- `Codec.Compression.Zlib`: Top-level re-exporter.  This is the simplest import for most users who want compression, decompression, streaming, and checksum functionality in one place.
+- `Codec.Compression.Zlib.Compress`: One-shot compression API.  It provides whole-buffer compression using zlib, gzip, or raw DEFLATE wrappers, with support for configurable compression levels and related options.
+- `Codec.Compression.Zlib.Decompress`: One-shot decompression API.  It accepts complete compressed buffers and expands them using zlib, gzip, or raw DEFLATE semantics, returning an error for malformed, truncated, or wrapper-mismatched input.
+- `Codec.Compression.Zlib.Stream`:  Incremental compression and decompression. It exposes scoped `StreamingCompressor` and `StreamingDecompressor` handles, chunk-based operations such as `compressChunk` / `decompressChunk`, explicit `consumed` counts, produced output chunks, `finished` state, and `finishCompressor` for completing a compression stream.
+- `Codec.Compression.Zlib.Checksum`:  CRC-32 and Adler-32 support. It provides both one-shot checksum functions and incremental update functions for processing data piece-by-piece.
